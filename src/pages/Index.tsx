@@ -31,11 +31,21 @@ interface Cargo {
   urgent: boolean;
 }
 
+interface RoutePoint {
+  id: number;
+  lat: number;
+  lng: number;
+  city: string;
+  type: 'start' | 'end' | 'current';
+}
+
 const Index = () => {
   const [searchFrom, setSearchFrom] = useState('');
   const [searchTo, setSearchTo] = useState('');
   const [distance, setDistance] = useState([500]);
   const [calculatedPrice, setCalculatedPrice] = useState(0);
+  const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   const drivers: Driver[] = [
     {
@@ -104,6 +114,24 @@ const Index = () => {
       cargoType: 'Продукты',
       urgent: false
     }
+  ];
+
+  const routes: RoutePoint[][] = [
+    [
+      { id: 1, lat: 55.7558, lng: 37.6173, city: 'Москва', type: 'start' },
+      { id: 2, lat: 54.9885, lng: 82.8985, city: 'Новосибирск (в пути)', type: 'current' },
+      { id: 3, lat: 55.0084, lng: 82.9357, city: 'Новосибирск', type: 'end' }
+    ],
+    [
+      { id: 4, lat: 59.9343, lng: 30.3351, city: 'Санкт-Петербург', type: 'start' },
+      { id: 5, lat: 56.8389, lng: 60.6057, city: 'Екатеринбург (почти на месте)', type: 'current' },
+      { id: 6, lat: 56.8389, lng: 60.6057, city: 'Екатеринбург', type: 'end' }
+    ],
+    [
+      { id: 7, lat: 55.7887, lng: 49.1221, city: 'Казань', type: 'start' },
+      { id: 8, lat: 51.5332, lng: 46.0347, city: 'Саратов (промежуточная остановка)', type: 'current' },
+      { id: 9, lat: 47.2357, lng: 39.7015, city: 'Ростов-на-Дону', type: 'end' }
+    ]
   ];
 
   const calculatePrice = () => {
@@ -372,6 +400,170 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+      </section>
+
+      <section className="py-16 container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h3 className="text-3xl font-bold mb-4">Отслеживание грузов в реальном времени</h3>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Следите за местоположением вашего груза на интерактивной карте
+          </p>
+        </div>
+
+        <Card className="max-w-6xl mx-auto shadow-2xl overflow-hidden">
+          <CardContent className="p-0">
+            <div className="grid lg:grid-cols-3">
+              <div className="lg:col-span-2 relative bg-gray-100 h-[500px]">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-full h-full relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-white to-orange-50">
+                      <svg className="w-full h-full" viewBox="0 0 800 500">
+                        <defs>
+                          <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#F97316" stopOpacity="0.8" />
+                            <stop offset="100%" stopColor="#0EA5E9" stopOpacity="0.8" />
+                          </linearGradient>
+                        </defs>
+
+                        {selectedRoute !== null && routes[selectedRoute] && (
+                          <g>
+                            <path
+                              d={`M ${routes[selectedRoute][0].lng * 8} ${400 - routes[selectedRoute][0].lat * 5} 
+                                  Q ${routes[selectedRoute][1].lng * 8} ${400 - routes[selectedRoute][1].lat * 5}, 
+                                    ${routes[selectedRoute][2].lng * 8} ${400 - routes[selectedRoute][2].lat * 5}`}
+                              stroke="url(#routeGradient)"
+                              strokeWidth="4"
+                              fill="none"
+                              strokeDasharray="8,4"
+                              className="animate-pulse"
+                            />
+
+                            {routes[selectedRoute].map((point, idx) => (
+                              <g key={point.id}>
+                                <circle
+                                  cx={point.lng * 8}
+                                  cy={400 - point.lat * 5}
+                                  r={point.type === 'current' ? 12 : 8}
+                                  fill={
+                                    point.type === 'start' ? '#10b981' :
+                                    point.type === 'end' ? '#ef4444' :
+                                    '#F97316'
+                                  }
+                                  className={point.type === 'current' ? 'animate-pulse' : ''}
+                                />
+                                {point.type === 'current' && (
+                                  <>
+                                    <circle
+                                      cx={point.lng * 8}
+                                      cy={400 - point.lat * 5}
+                                      r={20}
+                                      fill="none"
+                                      stroke="#F97316"
+                                      strokeWidth="2"
+                                      opacity="0.3"
+                                      className="animate-ping"
+                                    />
+                                    <text
+                                      x={point.lng * 8}
+                                      y={400 - point.lat * 5 - 30}
+                                      textAnchor="middle"
+                                      className="text-xs font-semibold fill-gray-700"
+                                    >
+                                      🚛
+                                    </text>
+                                  </>
+                                )}
+                                <text
+                                  x={point.lng * 8}
+                                  y={400 - point.lat * 5 + (point.type === 'current' ? 40 : 25)}
+                                  textAnchor="middle"
+                                  className="text-[10px] font-medium fill-gray-700"
+                                >
+                                  {point.city.split(' ')[0]}
+                                </text>
+                              </g>
+                            ))}
+                          </g>
+                        )}
+
+                        {selectedRoute === null && (
+                          <text
+                            x="400"
+                            y="250"
+                            textAnchor="middle"
+                            className="text-xl fill-gray-400 font-medium"
+                          >
+                            Выберите груз для отслеживания
+                          </text>
+                        )}
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white space-y-4 overflow-y-auto max-h-[500px]">
+                <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Icon name="MapPin" className="text-primary" />
+                  Активные грузы
+                </h4>
+                {cargos.map((cargo, idx) => (
+                  <Card
+                    key={cargo.id}
+                    className={`cursor-pointer transition-all duration-300 ${
+                      selectedRoute === idx
+                        ? 'border-2 border-primary shadow-lg scale-105'
+                        : 'hover:border-primary/50 hover:shadow-md'
+                    }`}
+                    onClick={() => setSelectedRoute(idx)}
+                  >
+                    <CardHeader className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Icon name="Package" size={16} className="text-secondary" />
+                            {cargo.cargoType}
+                          </CardTitle>
+                          <CardDescription className="text-xs mt-2 space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Icon name="MapPin" size={12} className="text-green-600" />
+                              <span>{cargo.from}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Icon name="MapPin" size={12} className="text-red-600" />
+                              <span>{cargo.to}</span>
+                            </div>
+                          </CardDescription>
+                        </div>
+                        {cargo.urgent && (
+                          <Badge variant="destructive" className="text-xs">
+                            Срочно
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600">{cargo.distance} км</span>
+                        <span className="font-semibold text-primary">
+                          {cargo.suggestedPrice.toLocaleString()} ₽
+                        </span>
+                      </div>
+                      {selectedRoute === idx && (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <span>Груз в пути</span>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="py-16 container mx-auto px-4">
